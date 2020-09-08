@@ -53,7 +53,36 @@ def mirror(name):
 
 @app.route("/shows", methods=['GET'])
 def get_all_shows():
+    if "minEpisodes" in request.args:
+        minEps = int(request.args["minEpisodes"])
+        filteredShows = [x for x in db.get('shows') if int(x['episodes_seen']) >= minEps]
+        return create_response({"shows": filteredShows})
     return create_response({"shows": db.get('shows')})
+
+@app.route("/shows/<id>", methods=['GET'])
+def get_show_by_id(id):
+    show = db.getById('shows', int(id))
+    if show:
+        return create_response({"shows": show})
+    return create_response(status=404, message = "Show id not found!")
+
+@app.route("/shows", methods=['POST'])
+def create_show():
+    data = request.get_json()
+    if "name" in data and "episodes_seen" in data:
+        return create_response(db.create('shows', data), status=201)
+    else:
+        null_parameters = ""
+        for param in ["name", "episodes_seen"]:
+            if param not in data:
+                null_parameters += "'{}' ".format(param)
+        return create_response(status=422, message="Make sure to include {}in request body.".format(null_parameters))
+
+@app.route("/shows/<id>", methods=['PUT'])
+def update_show(id):
+    if db.updateById("shows", int(id), request.get_json()):
+        return create_response(db.getById('shows', int(id)), status=201)
+    return create_response(status=404, message="Show id {} does not exist!".format(int(id)))
 
 @app.route("/shows/<id>", methods=['DELETE'])
 def delete_show(id):
